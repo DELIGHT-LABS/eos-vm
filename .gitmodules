@@ -4,3 +4,6 @@
 [submodule "external/softfloat"]
 	path = external/softfloat
 	url = https://github.com/AntelopeIO/berkeley-softfloat-3
+[submodule "external/serdepp"]
+	path = external/serdepp
+	url = https://github.com/injae/serdepp

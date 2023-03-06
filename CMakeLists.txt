@@ -26,6 +26,10 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads)
 link_libraries(Threads::Threads)
 
+# Serdepp
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/serdepp)
+link_libraries(serdepp::serdepp)
+
 # ##################################################################################################
 # Gate against Windows builds.
 # ##################################################################################################

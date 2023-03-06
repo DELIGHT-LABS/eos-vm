@@ -1,3 +1,6 @@
+#include <serdepp/serde.hpp>
+#include <serdepp/adaptor/nlohmann_json.hpp>
+
 #include <eosio/vm/backend.hpp>
 #include <eosio/vm/error_codes.hpp>
 #include <eosio/vm/host_function.hpp>

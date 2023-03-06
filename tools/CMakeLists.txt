@@ -10,9 +10,10 @@ target_link_libraries(bench-interp eos-vm)
 add_executable(hello-driver ${CMAKE_CURRENT_SOURCE_DIR}/hello_driver.cpp)
 target_link_libraries(hello-driver eos-vm)
 
-add_executable(eos-vm-cosmwasm ${CMAKE_CURRENT_SOURCE_DIR}/cosmwasm_exec.cpp)
-target_link_libraries(eos-vm-cosmwasm eos-vm)
-
 add_executable(eos-vm-addr2line addr2line.cpp)
 target_link_libraries(eos-vm-addr2line eos-vm)
 
+# find_package(serdepp)
+# link_libraries(serdepp::serdepp)
+add_executable(eos-vm-cosmwasm ${CMAKE_CURRENT_SOURCE_DIR}/cosmwasm_exec.cpp)
+target_link_libraries(eos-vm-cosmwasm eos-vm)

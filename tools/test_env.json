@@ -1,0 +1,13 @@
+{
+   "block":{
+      "height":12345,
+      "time":"1578939743987654321",
+      "chain_id":"leap-1"
+   },
+   "transaction":{
+      "index":3
+   },
+   "contract":{
+      "address":"antelopeContract"
+   }
+}

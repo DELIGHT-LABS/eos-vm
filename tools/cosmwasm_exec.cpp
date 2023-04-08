@@ -142,10 +142,19 @@ int main(int argc, char** argv) {
 
       // Instaniate a "host"
       ehm.field = "testing";
-      
+
+      // serialize json params
+      auto test_env = serde::parse_file<nlohmann::json>("./test_env.json");
+      auto test_info = serde::parse_file<nlohmann::json>("./test_info.json");
+      auto test_instantiate_msg = serde::parse_file<nlohmann::json>("./test_instantiate_msg.json");
+
       // Execute "instantiate" instead of "apply".
-      // bkend(ehm, "env", "instantiate", int32_t(1), int32_t(2), int32_t(3));
-      auto ret = bkend.call_with_return(ehm, "env", "instantiate", uint32_t(123), uint32_t(125), uint32_t(0));
+      auto ret = bkend.call_with_return(
+         ehm, "env", "instantiate",
+         test_env.get_binary(),
+         test_info.get_binary(),
+         test_instantiate_msg.get_binary()
+      );
 
       std::cout << ret.value().to_i32() << '\n';
 

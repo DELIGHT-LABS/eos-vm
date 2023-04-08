@@ -1,0 +1,9 @@
+{
+   "sender":"test_sender",
+   "funds":[
+      {
+         "denom":"EOS",
+         "amount":"1000000"
+      }
+   ]
+}

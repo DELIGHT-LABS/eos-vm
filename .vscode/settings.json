@@ -1,0 +1,12 @@
+{
+    "cmake.configureOnOpen": true,
+    "cmake.configureSettings" :{
+        "SERDEPP_USE_NLOHMANN_JSON": "ON"
+    },
+    "files.associations": {
+        "optional": "cpp",
+        "variant": "cpp",
+        "string_view": "cpp",
+        "system_error": "cpp"
+    }
+}

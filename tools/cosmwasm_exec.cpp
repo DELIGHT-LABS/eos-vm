@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <string>
+#include <cstring>
 
 using namespace eosio;
 using namespace eosio::vm;
@@ -81,16 +82,25 @@ struct cnv : type_converter<example_host_methods> {
 //             throw "failure";
 //    }))
 
+using rhf_t     = eosio::vm::registered_host_functions<example_host_methods, execution_interface, cnv>;
+using backend_t = eosio::vm::backend<rhf_t>;
+
+uint32_t store_data_into_ptr(std::string name, backend_t& bkend, example_host_methods& ehm, char* data) {
+   int length = (int)sizeof(data) + 1;
+
+   auto address = bkend.call_with_return(ehm, "env", "allocate", length).value().to_ui32();
+   std::cout << name << " address: " << address << '\n';
+
+   std::memcpy((void*)address, data, length);
+   return address;
+}
+
 /**
  * Simple implementation of an interpreter using eos-vm.
  */
 int main(int argc, char** argv) {
    // Thread specific `allocator` used for wasm linear memory.
    wasm_allocator wa;
-
-   // Specific the backend with example_host_methods for host functions.
-   using rhf_t     = eosio::vm::registered_host_functions<example_host_methods, execution_interface, cnv>;
-   using backend_t = eosio::vm::backend<rhf_t>;
 
    // register print_num
    // rhf_t::add<&example_host_methods::print_num>("env", "print_num");
@@ -144,19 +154,24 @@ int main(int argc, char** argv) {
       ehm.field = "testing";
 
       // serialize json params
+      std::cout << "before parsing\n";
       auto test_env = serde::parse_file<nlohmann::json>("./test_env.json");
       auto test_info = serde::parse_file<nlohmann::json>("./test_info.json");
       auto test_instantiate_msg = serde::parse_file<nlohmann::json>("./test_instantiate_msg.json");
 
-      // Execute "instantiate" instead of "apply".
-      auto ret = bkend.call_with_return(
-         ehm, "env", "instantiate",
-         test_env.get_binary(),
-         test_info.get_binary(),
-         test_instantiate_msg.get_binary()
-      );
+      auto env_data = test_env.dump().data();
+      auto info_data = test_info.dump().data();
+      auto msg_data = test_instantiate_msg.dump().data();
 
-      std::cout << ret.value().to_i32() << '\n';
+      uint32_t env_ptr = store_data_into_ptr("env", bkend, ehm, env_data);
+      uint32_t info_ptr = store_data_into_ptr("info", bkend, ehm, info_data);
+      uint32_t msg_ptr = store_data_into_ptr("msg", bkend, ehm, msg_data);
+
+      // Execute "instantiate" instead of "apply".
+      auto ret = bkend.call_with_return(ehm, "env", "instantiate", env_ptr, info_ptr, msg_ptr);
+
+      std::cout << ret.value() << '\n';
+      std::cout << "printout\n";
 
    } catch (const eosio::vm::exception& ex) {
       std::cerr << "eos-vm interpreter error\n";

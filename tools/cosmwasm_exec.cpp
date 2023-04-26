@@ -5,6 +5,7 @@
 #include <eosio/vm/error_codes.hpp>
 #include <eosio/vm/host_function.hpp>
 #include <eosio/vm/watchdog.hpp>
+#include <eosio/vm/allocator.hpp>
 
 #include <iostream>
 #include <string>
@@ -12,6 +13,8 @@
 
 using namespace eosio;
 using namespace eosio::vm;
+
+uint8_t OFFSET = 0;
 
 struct example_host_methods {
    // void print_num(uint64_t n) { std::cout << "Number : " << n << "\n"; }
@@ -61,10 +64,14 @@ struct example_host_methods {
    uint32_t __wbindgen_externref_table_grow(uint32_t num) { return num; }
    void __wbindgen_externref_table_set_null(int32_t num) { std::cout << "__wbindgen_externref_table_set_null: " << num << "\n"; }
 
-   int32_t instantiate(int32_t num1, int32_t num2, int32_t num3) {
-      std::cout << num1 << " " << num2 << " " << num3 << '\n';
-      return num1 + num2 + num3;
-   }
+   // int32_t instantiate(int32_t num1, int32_t num2, int32_t num3) {
+   //    std::cout << num1 << " " << num2 << " " << num3 << '\n';
+   //    return num1 + num2 + num3;
+   // }
+
+   // int32_t allocate(int32_t size) {
+
+   // }
 };
 
 struct cnv : type_converter<example_host_methods> {
@@ -85,14 +92,21 @@ struct cnv : type_converter<example_host_methods> {
 using rhf_t     = eosio::vm::registered_host_functions<example_host_methods, execution_interface, cnv>;
 using backend_t = eosio::vm::backend<rhf_t>;
 
-uint32_t store_data_into_ptr(std::string name, backend_t& bkend, example_host_methods& ehm, char* data) {
-   int length = (int)sizeof(data) + 1;
+int32_t allocate(backend_t* bkend, example_host_methods ehm, int size) {
+   auto ret = bkend->call_with_return(ehm, "env", "allocate", size);
+   return ret.value().to_i32();
+}
 
-   auto address = bkend.call_with_return(ehm, "env", "allocate", length).value().to_ui32();
-   std::cout << name << " address: " << address << '\n';
+void write_memory(eosio::vm::wasm_allocator* alloc, int32_t ptr, std::string data) {
+   char* raw_ptr = alloc->create_pointer<char>(ptr);
+   char* itr = raw_ptr;
 
-   std::memcpy((void*)address, data, length);
-   return address;
+   for (int i=0; i < data.length(); ++i) {
+      *itr = data[i];
+      ++itr;
+   }
+
+   // *itr = '\0';
 }
 
 /**
@@ -101,6 +115,8 @@ uint32_t store_data_into_ptr(std::string name, backend_t& bkend, example_host_me
 int main(int argc, char** argv) {
    // Thread specific `allocator` used for wasm linear memory.
    wasm_allocator wa;
+   wa.alloc<char>(1000);
+   wa.reset(1000);
 
    // register print_num
    // rhf_t::add<&example_host_methods::print_num>("env", "print_num");
@@ -159,18 +175,29 @@ int main(int argc, char** argv) {
       auto test_info = serde::parse_file<nlohmann::json>("./test_info.json");
       auto test_instantiate_msg = serde::parse_file<nlohmann::json>("./test_instantiate_msg.json");
 
-      auto env_data = test_env.dump().data();
-      auto info_data = test_info.dump().data();
-      auto msg_data = test_instantiate_msg.dump().data();
+      auto env_data = test_env.dump();
+      auto info_data = test_info.dump();
+      auto msg_data = test_instantiate_msg.dump();
 
-      uint32_t env_ptr = store_data_into_ptr("env", bkend, ehm, env_data);
-      uint32_t info_ptr = store_data_into_ptr("info", bkend, ehm, info_data);
-      uint32_t msg_ptr = store_data_into_ptr("msg", bkend, ehm, msg_data);
+      // param ptr -> env_ptr, info_ptr, msg_ptr
+      // region ptr -> alloc
+      int32_t env_ptr = allocate(&bkend, ehm, (int32_t)env_data.length());
+      write_memory(&wa, env_ptr, env_data);
+      std::cout << "env: " << env_ptr << '\n';
+
+      int32_t info_ptr = allocate(&bkend, ehm, (int32_t)info_data.length());
+      write_memory(&wa, info_ptr, info_data);
+      std::cout << "info: " << info_ptr << '\n';
+
+      int32_t msg_ptr = allocate(&bkend, ehm, (int32_t)msg_data.length());
+      write_memory(&wa, msg_ptr, msg_data);
+      std::cout << "msg: " << msg_ptr << '\n';
 
       // Execute "instantiate" instead of "apply".
-      auto ret = bkend.call_with_return(ehm, "env", "instantiate", env_ptr, info_ptr, msg_ptr);
+      // auto ret = bkend.call_with_return(ehm, "env", "instantiate", env_ptr, info_ptr, msg_ptr);
+      bkend.call(ehm, "env", "instantiate", env_ptr, info_ptr, msg_ptr);
 
-      std::cout << ret.value() << '\n';
+      // std::cout << ret.value() << '\n';
       std::cout << "printout\n";
 
    } catch (const eosio::vm::exception& ex) {
